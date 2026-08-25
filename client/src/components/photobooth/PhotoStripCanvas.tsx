@@ -72,46 +72,61 @@ export const PhotoStripCanvas: React.FC<PhotoStripCanvasProps> = ({
     };
   }, [capturedPhotos, selectedTemplate, headerText, subText, eventDate, activeFilter, stickers]);
 
-  // Mobile-Friendly Native Share & Download Handler
+  // Universal Direct Download Helper (Desktop + Mobile compatible)
+  const triggerDirectDownload = (url: string, fileName: string) => {
+    try {
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        if (document.body.contains(link)) {
+          document.body.removeChild(link);
+        }
+      }, 300);
+    } catch (e) {
+      console.error('Direct link download error:', e);
+      window.open(url, '_blank');
+    }
+  };
+
+  // Mobile-Friendly Native Share & Desktop Download Handler
   const handleDownloadPNG = async () => {
     if (!previewUrl) return;
 
-    try {
-      const res = await fetch(previewUrl);
-      const blob = await res.blob();
-      const fileName = `SnapTogether_${selectedTemplate?.category || 'Strip'}_${Date.now()}.png`;
-      const file = new File([blob], fileName, { type: 'image/png' });
+    const fileName = `SnapTogether_${selectedTemplate?.category || 'Strip'}_${Date.now()}.png`;
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-      // 1. Mobile Native Web Share API (Save to Photos / Camera Roll on iOS & Android)
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: 'SnapTogether Photo Strip',
-          text: 'Check out my photo strip from SnapTogether!'
-        });
-        return;
+    if (isMobile && navigator.canShare) {
+      try {
+        const res = await fetch(previewUrl);
+        const blob = await res.blob();
+        const file = new File([blob], fileName, { type: 'image/png' });
+
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: 'SnapTogether Photo Strip',
+            text: 'Check out my photo strip from SnapTogether!'
+          });
+          return;
+        }
+      } catch (err) {
+        console.warn('Mobile share canceled or failed, falling back to direct download', err);
       }
-
-      // 2. Mobile Blob Object URL Download Fallback
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-    } catch (err) {
-      console.warn('Share API failed, falling back to direct anchor link download', err);
-      const a = document.createElement('a');
-      a.href = previewUrl;
-      a.download = `SnapTogether_${Date.now()}.png`;
-      a.click();
     }
+
+    // Direct Download for Desktop & Mobile fallback
+    triggerDirectDownload(previewUrl, fileName);
   };
 
   const handleDownloadJPG = async () => {
     if (!previewUrl) return;
+
+    const fileName = `SnapTogether_Strip_${Date.now()}.jpg`;
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     try {
       const canvas = document.createElement('canvas');
@@ -132,34 +147,30 @@ export const PhotoStripCanvas: React.FC<PhotoStripCanvasProps> = ({
         ctx.drawImage(img, 0, 0);
 
         const jpgDataUrl = canvas.toDataURL('image/jpeg', 0.95);
-        const res = await fetch(jpgDataUrl);
-        const blob = await res.blob();
-        const fileName = `SnapTogether_Strip_${Date.now()}.jpg`;
-        const file = new File([blob], fileName, { type: 'image/jpeg' });
 
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            files: [file],
-            title: 'SnapTogether Photo Strip',
-            text: 'Check out my photo strip from SnapTogether!'
-          });
-          return;
+        if (isMobile && navigator.canShare) {
+          try {
+            const res = await fetch(jpgDataUrl);
+            const blob = await res.blob();
+            const file = new File([blob], fileName, { type: 'image/jpeg' });
+
+            if (navigator.canShare({ files: [file] })) {
+              await navigator.share({
+                files: [file],
+                title: 'SnapTogether Photo Strip',
+                text: 'Check out my photo strip from SnapTogether!'
+              });
+              return;
+            }
+          } catch (err) {
+            console.warn('Mobile JPG share failed, falling back to direct download', err);
+          }
         }
 
-        const blobUrl = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+        triggerDirectDownload(jpgDataUrl, fileName);
       }
     } catch (err) {
-      const a = document.createElement('a');
-      a.href = previewUrl;
-      a.download = `SnapTogether_${Date.now()}.jpg`;
-      a.click();
+      triggerDirectDownload(previewUrl, fileName);
     }
   };
 
@@ -178,7 +189,7 @@ export const PhotoStripCanvas: React.FC<PhotoStripCanvasProps> = ({
               <img
                 src={previewUrl}
                 alt="Generated Photo Strip"
-                className="h-full w-full object-contain rounded-xl shadow-2xl select-none"
+                className="h-full w-full object-contain rounded-xl shadow-2xl"
               />
             </div>
           )}
@@ -186,7 +197,7 @@ export const PhotoStripCanvas: React.FC<PhotoStripCanvasProps> = ({
 
         {/* Mobile Long-Press Helper Tip */}
         <p className="text-[11px] font-medium text-zinc-400 text-center">
-          💡 <span className="text-zinc-200 font-semibold">Mobile Tip:</span> Tap button below to save to Photos, or long-press image above.
+          💡 <span className="text-zinc-200 font-semibold">Tip:</span> Click Download below or right-click / long-press image to save.
         </p>
 
         <div className="flex items-center gap-2">
@@ -282,15 +293,15 @@ export const PhotoStripCanvas: React.FC<PhotoStripCanvasProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button
               onClick={handleDownloadPNG}
-              className="flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-3.5 text-xs font-bold text-white hover:bg-rose-500 shadow-lg shadow-rose-600/20 transition-all"
+              className="flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-3.5 text-xs font-bold text-white hover:bg-rose-500 shadow-lg shadow-rose-600/20 transition-all cursor-pointer"
             >
-              <Share2 className="h-4 w-4" />
-              <span>Save to Photos / Download PNG</span>
+              <Download className="h-4 w-4" />
+              <span>Download PNG (High-Res)</span>
             </button>
 
             <button
               onClick={handleDownloadJPG}
-              className="flex items-center justify-center gap-2 rounded-xl bg-white/[0.05] px-4 py-3.5 text-xs font-bold text-zinc-200 hover:bg-white/10 border border-white/5 transition-all"
+              className="flex items-center justify-center gap-2 rounded-xl bg-white/[0.05] px-4 py-3.5 text-xs font-bold text-zinc-200 hover:bg-white/10 border border-white/5 transition-all cursor-pointer"
             >
               <Download className="h-4 w-4 text-amber-400" />
               <span>Download JPG</span>
@@ -298,7 +309,7 @@ export const PhotoStripCanvas: React.FC<PhotoStripCanvasProps> = ({
 
             <button
               onClick={onOpenPrintModal}
-              className="flex items-center justify-center gap-2 rounded-xl bg-white/[0.05] px-4 py-3.5 text-xs font-bold text-zinc-200 hover:bg-white/10 border border-white/5 transition-all"
+              className="flex items-center justify-center gap-2 rounded-xl bg-white/[0.05] px-4 py-3.5 text-xs font-bold text-zinc-200 hover:bg-white/10 border border-white/5 transition-all cursor-pointer"
             >
               <Printer className="h-4 w-4 text-indigo-400" />
               <span>Print Ready Format</span>
@@ -306,7 +317,7 @@ export const PhotoStripCanvas: React.FC<PhotoStripCanvasProps> = ({
 
             <button
               onClick={() => onOpenQRModal(previewUrl)}
-              className="flex items-center justify-center gap-2 rounded-xl bg-white/[0.05] px-4 py-3.5 text-xs font-bold text-zinc-200 hover:bg-white/10 border border-white/5 transition-all"
+              className="flex items-center justify-center gap-2 rounded-xl bg-white/[0.05] px-4 py-3.5 text-xs font-bold text-zinc-200 hover:bg-white/10 border border-white/5 transition-all cursor-pointer"
             >
               <QrCode className="h-4 w-4 text-emerald-400" />
               <span>Mobile QR Code</span>
