@@ -21,11 +21,11 @@ export const JoinRoom: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const apiUrl = getApiUrl(`/api/rooms/${code}/join`);
+      const apiUrl = getApiUrl('/api/rooms');
       const res = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username.trim(), code })
+        body: JSON.stringify({ action: 'join', code, username: username.trim() })
       });
 
       const data = await res.json();
@@ -34,11 +34,11 @@ export const JoinRoom: React.FC = () => {
         setRoom(data.room);
         navigate(`/room/${code}`);
       } else {
-        alert(data.message || 'Room not found');
+        alert(data.message || 'Room not found. Please check your room code.');
       }
     } catch (err) {
       console.error('Join room failed', err);
-      alert('Could not join room');
+      alert('Could not join room. Please try again.');
     } finally {
       setIsLoading(false);
     }

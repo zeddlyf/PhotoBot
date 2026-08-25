@@ -29,14 +29,44 @@ export default function handler(req, res) {
     body = body || {};
 
     if (req.method === 'POST') {
-      const { hostName, roomName, templateId, maxPhotos, countdownSeconds, username, code } = body;
+      const { hostName, roomName, templateId, maxPhotos, countdownSeconds, username, code, action } = body;
 
       // Handle Join Room request
-      if (code || (req.url && req.url.includes('join'))) {
+      if (action === 'join' || code) {
         const roomCode = (code || req.query.code || '').toUpperCase();
-        const room = rooms.get(roomCode);
+        if (!roomCode) {
+          return res.status(400).json({ success: false, message: 'Room code is required' });
+        }
+
+        let room = rooms.get(roomCode);
+
+        // On-demand serverless fallback recovery if room cold-started
         if (!room) {
-          return res.status(404).json({ success: false, message: 'Room not found' });
+          const roomId = crypto.randomUUID();
+          const hostId = crypto.randomUUID();
+          room = {
+            id: roomId,
+            roomCode,
+            roomName: `Photo Booth (${roomCode})`,
+            hostId,
+            templateId: 'studio_clean_white',
+            status: 'lobby',
+            maxPhotos: 4,
+            countdownSeconds: 3,
+            members: [],
+            capturedPhotos: {},
+            chatMessages: [
+              {
+                id: crypto.randomUUID(),
+                userId: 'system',
+                username: 'System',
+                text: `Welcome to SnapTogether room ${roomCode}!`,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              }
+            ],
+            createdAt: new Date().toISOString()
+          };
+          rooms.set(roomCode, room);
         }
 
         const existingUser = room.members.find(m => m.username.toLowerCase() === (username || '').toLowerCase());
@@ -46,15 +76,15 @@ export default function handler(req, res) {
           room.members.push({
             id: userId,
             username,
-            isHost: false,
+            isHost: room.members.length === 0,
             readyStatus: false,
             socketId: ''
           });
         }
 
-        return res.json({
+        return res.status(200).json({
           success: true,
-          user: { id: userId, username, isHost: existingUser?.isHost || false },
+          user: { id: userId, username, isHost: room.members.length === 1 || existingUser?.isHost || false },
           room
         });
       }
@@ -113,7 +143,7 @@ export default function handler(req, res) {
     if (req.method === 'GET') {
       const code = (req.query.code || '').toUpperCase();
       if (code) {
-        const room = rooms.get(code);
+        let room = rooms.get(code);
         if (!room) {
           return res.status(404).json({ success: false, message: 'Room not found' });
         }
