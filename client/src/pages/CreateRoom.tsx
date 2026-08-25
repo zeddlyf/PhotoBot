@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useRoomStore } from '../store/useRoomStore';
 import { TemplateSelector } from '../components/templates/TemplateSelector';
 import { DEFAULT_TEMPLATES } from '../utils/templates';
-import { Camera, Sparkles, User as UserIcon, Settings, Layers, Timer } from 'lucide-react';
+import { Camera, User as UserIcon, Settings, Timer } from 'lucide-react';
 
 export const getApiUrl = (endpoint: string) => {
   const socketUrl = import.meta.env.VITE_SOCKET_URL;
@@ -20,8 +20,7 @@ export const CreateRoom: React.FC = () => {
 
   const [hostName, setHostName] = useState('');
   const [roomName, setRoomName] = useState('');
-  const [selectedTemplateId, setSelectedTemplateId] = useState('studio_clean_white');
-  const [maxPhotos, setMaxPhotos] = useState(4);
+  const [selectedTemplateId, setSelectedTemplateId] = useState('life4cuts_korean');
   const [countdownSeconds, setCountdownSeconds] = useState(3);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -41,7 +40,7 @@ export const CreateRoom: React.FC = () => {
           hostName: hostName.trim(),
           roomName: roomName.trim() || `${hostName}'s Photo Booth`,
           templateId: selectedTemplateId,
-          maxPhotos,
+          maxPhotos: selectedTempObj.slots,
           countdownSeconds
         })
       });
@@ -113,41 +112,23 @@ export const CreateRoom: React.FC = () => {
         <div className="rounded-3xl glass-panel p-6 border border-white/10 space-y-4">
           <div className="flex items-center gap-2 text-xs font-bold text-zinc-300 uppercase tracking-wider">
             <Settings className="h-4 w-4 text-rose-400" />
-            <span>Capture Preferences</span>
+            <span>Capture Timer Preference</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-[11px] font-semibold text-zinc-400 block mb-1.5 flex items-center gap-1.5">
-                <Timer className="h-3.5 w-3.5 text-amber-400" />
-                <span>Countdown Duration</span>
-              </label>
-              <select
-                value={countdownSeconds}
-                onChange={(e) => setCountdownSeconds(Number(e.target.value))}
-                className="w-full rounded-2xl bg-zinc-900/90 px-4 py-3 text-xs text-white outline-none border border-white/10 focus:border-rose-500 transition-all"
-              >
-                <option value={3}>3 Seconds (Quick)</option>
-                <option value={5}>5 Seconds (Standard)</option>
-                <option value={10}>10 Seconds (Relaxed)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="text-[11px] font-semibold text-zinc-400 block mb-1.5 flex items-center gap-1.5">
-                <Layers className="h-3.5 w-3.5 text-rose-400" />
-                <span>Strip Frame Slots</span>
-              </label>
-              <select
-                value={maxPhotos}
-                onChange={(e) => setMaxPhotos(Number(e.target.value))}
-                className="w-full rounded-2xl bg-zinc-900/90 px-4 py-3 text-xs text-white outline-none border border-white/10 focus:border-rose-500 transition-all"
-              >
-                <option value={3}>3 Photos</option>
-                <option value={4}>4 Photos (Standard Vertical Strip)</option>
-                <option value={6}>6 Photos (Full Collage)</option>
-              </select>
-            </div>
+          <div>
+            <label className="text-[11px] font-semibold text-zinc-400 block mb-1.5 flex items-center gap-1.5">
+              <Timer className="h-3.5 w-3.5 text-amber-400" />
+              <span>Countdown Duration</span>
+            </label>
+            <select
+              value={countdownSeconds}
+              onChange={(e) => setCountdownSeconds(Number(e.target.value))}
+              className="w-full rounded-2xl bg-zinc-900/90 px-4 py-3 text-xs text-white outline-none border border-white/10 focus:border-rose-500 transition-all"
+            >
+              <option value={3}>3 Seconds (Quick)</option>
+              <option value={5}>5 Seconds (Standard)</option>
+              <option value={10}>10 Seconds (Relaxed)</option>
+            </select>
           </div>
         </div>
 
