@@ -32,11 +32,12 @@ export function useSocket(roomCode?: string) {
       return;
     }
 
-    // Initialize Socket Connection
+    // Initialize Socket Connection with Polling first for cloud load-balancers (Render / Railway)
     const socket = io(serverUrl, {
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'],
       autoConnect: true,
-      reconnectionAttempts: 3
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000
     });
 
     socketRef.current = socket;
