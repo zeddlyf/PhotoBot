@@ -121,7 +121,7 @@ export async function generatePhotoStripCanvas(
             console.warn(`Failed to render image slot ${i}`, err);
           }
         } else {
-          // Role Placeholder Text (Left Column = Host, Right Column = Joiner)
+          // Role Placeholder Text
           const roleLabel = c === 0 ? `HOST (SLOT #${i + 1})` : `JOINER (SLOT #${i + 1})`;
           ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
           ctx.font = 'bold 24px sans-serif';
@@ -131,7 +131,7 @@ export async function generatePhotoStripCanvas(
       }
     }
 
-    // Grid Footer Section
+    // Grid Footer Section with zeddlyf branding
     const footerY = canvas.height - footerHeight / 2 - 10;
     ctx.save();
     ctx.textAlign = 'center';
@@ -145,12 +145,12 @@ export async function generatePhotoStripCanvas(
     ctx.fillText((subText || template.subText || 'PAIR PHOTO BOOTH').toUpperCase(), canvas.width / 2, footerY + 28);
 
     ctx.fillStyle = footerSubTextColor;
-    ctx.font = '500 18px "Inter", sans-serif';
-    ctx.fillText(`• ${eventDate.toUpperCase()} • STAGE STUDIO`, canvas.width / 2, footerY + 62);
+    ctx.font = '600 18px "Inter", sans-serif';
+    ctx.fillText(`• ${eventDate.toUpperCase()} • CREATED BY ZEDDLYF`, canvas.width / 2, footerY + 62);
     ctx.restore();
 
   } else {
-    // 4-Slot Vertical Polaroid Strip Renderer (Turn-Based Alternating Host & Joiner)
+    // 4-Slot Vertical Polaroid Strip Renderer
     const borderWidth = 30;
     ctx.strokeStyle = primaryTextColor;
     ctx.lineWidth = borderWidth;
@@ -235,6 +235,7 @@ export async function generatePhotoStripCanvas(
       }
     }
 
+    // Vertical Strip Footer with zeddlyf branding
     const footerY = canvas.height - 90;
     ctx.save();
     ctx.textAlign = 'center';
@@ -243,8 +244,8 @@ export async function generatePhotoStripCanvas(
     ctx.fillText(`• ${eventDate.toUpperCase()} •`, 400, footerY);
 
     ctx.fillStyle = footerSubTextColor;
-    ctx.font = '500 22px "Inter", sans-serif';
-    ctx.fillText('SNAPTOGETHER.APP — CREATED WITH FRIENDS', 400, footerY + 40);
+    ctx.font = '600 22px "Inter", sans-serif';
+    ctx.fillText('SNAPTOGETHER.APP — CREATED BY ZEDDLYF', 400, footerY + 40);
     ctx.restore();
   }
 

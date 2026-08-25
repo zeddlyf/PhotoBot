@@ -6,7 +6,7 @@ import { JoinRoom } from './pages/JoinRoom';
 import { BoothRoom } from './pages/BoothRoom';
 import { Gallery } from './pages/Gallery';
 import { Profile } from './pages/Profile';
-import { Camera, PlusCircle, UserCheck, Film } from 'lucide-react';
+import { Camera, PlusCircle, UserCheck, Film, Heart } from 'lucide-react';
 
 const Navbar: React.FC = () => {
   const location = useLocation();
@@ -82,7 +82,11 @@ const Footer: React.FC = () => (
         <span className="font-bold text-zinc-300">SnapTogether Studio</span>
         <span>— Real-Time Multiplayer Photo Booth</span>
       </div>
-      <p>© 2026 SnapTogether. Designed with solid minimal aesthetics.</p>
+      <p className="flex items-center gap-1.5 font-medium text-zinc-400">
+        <span>Created by</span>
+        <span className="font-extrabold text-rose-400 tracking-wide uppercase">zeddlyf</span>
+        <Heart className="h-3 w-3 text-rose-500 fill-rose-500 inline" />
+      </p>
     </div>
   </footer>
 );
