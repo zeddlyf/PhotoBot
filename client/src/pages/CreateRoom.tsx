@@ -5,13 +5,22 @@ import { TemplateSelector } from '../components/templates/TemplateSelector';
 import { DEFAULT_TEMPLATES } from '../utils/templates';
 import { Camera, Sparkles, User as UserIcon, Settings, Layers, Timer } from 'lucide-react';
 
+export const getApiUrl = (endpoint: string) => {
+  const socketUrl = import.meta.env.VITE_SOCKET_URL;
+  if (socketUrl) return `${socketUrl}${endpoint}`;
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    return `http://localhost:3001${endpoint}`;
+  }
+  return endpoint;
+};
+
 export const CreateRoom: React.FC = () => {
   const navigate = useNavigate();
   const { setCurrentUser, setRoom, setSelectedTemplate } = useRoomStore();
 
   const [hostName, setHostName] = useState('');
   const [roomName, setRoomName] = useState('');
-  const [selectedTemplateId, setSelectedTemplateId] = useState('wedding_champagne');
+  const [selectedTemplateId, setSelectedTemplateId] = useState('studio_clean_white');
   const [maxPhotos, setMaxPhotos] = useState(4);
   const [countdownSeconds, setCountdownSeconds] = useState(3);
   const [isLoading, setIsLoading] = useState(false);
@@ -24,8 +33,8 @@ export const CreateRoom: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const serverUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001';
-      const res = await fetch(`${serverUrl}/api/rooms`, {
+      const apiUrl = getApiUrl('/api/rooms');
+      const res = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
