@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-inter: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-outfit: 'Outfit', sans-serif;
+    --font-cinzel: 'Cinzel', serif;
+    --font-space: 'Space Grotesk', monospace;
+    --font-playfair: 'Playfair Display', serif;
+  }
+
+  body {
+    font-family: var(--font-inter);
+    background-color: #08080a;
+    color: #f4f4f5;
+    overflow-x: hidden;
+    letter-spacing: -0.01em;
+  }
+}
+
+/* Studio Glassmorphism System */
+.glass-panel {
+  background: rgba(18, 18, 22, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel-glow {
+  background: rgba(22, 22, 28, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 20px 50px -15px rgba(0, 0, 0, 0.7);
+}
+
+.glass-card {
+  background: rgba(28, 28, 34, 0.55);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-card-hover {
+  transition: all 0.3s ease;
+}
+
+.glass-card-hover:hover {
+  transform: translateY(-3px);
+  border-color: rgba(244, 63, 94, 0.4);
+  background: rgba(32, 32, 38, 0.75);
+  box-shadow: 0 16px 35px -12px rgba(244, 63, 94, 0.15);
+}
+
+/* Solid Flat Accent Theme Colors (No Gradients) */
+.text-theme-accent {
+  color: #f43f5e;
+}
+
+.text-theme-gold {
+  color: #eab308;
+}
+
+.bg-theme-accent {
+  background-color: #e11d48;
+}
+
+/* Shutter Flash Animation */
+@keyframes shutterFlash {
+  0% { opacity: 0; }
+  20% { opacity: 1; background-color: #ffffff; }
+  100% { opacity: 0; }
+}
+
+.animate-shutter-flash {
+  animation: shutterFlash 0.5s ease-out forwards;
+}
+
+/* Custom Minimalist Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #08080a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
+
+/* Print CSS */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-photo-strip, #printable-photo-strip * {
+    visibility: visible;
+  }
+  #printable-photo-strip {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+}
