@@ -14,6 +14,13 @@ export function setupRoomHandlers(io: Server, socket: Socket) {
       return;
     }
 
+    // Enforce 2-Player Maximum Constraint
+    const isExisting = room.members.some(m => m.id === userId);
+    if (!isExisting && room.members.length >= 2) {
+      socket.emit('error_message', { message: 'Room is full (Maximum 2 players allowed)' });
+      return;
+    }
+
     socket.join(`room:${code}`);
     
     // Bind user socket
@@ -93,7 +100,7 @@ export function setupRoomHandlers(io: Server, socket: Socket) {
 
     // Initiate countdown
     const duration = room.countdownSeconds || 3;
-    const maxPhotos = room.maxPhotos || 4;
+    const maxPhotos = room.maxPhotos || 8;
 
     io.to(`room:${code}`).emit('countdown_started', {
       seconds: duration,
@@ -120,12 +127,10 @@ export function setupRoomHandlers(io: Server, socket: Socket) {
 
           currentSlot++;
           if (currentSlot < maxPhotos) {
-            // Pause 2 seconds between shots, then run next slot
             setTimeout(() => {
               runSlotCapture();
             }, 2200);
           } else {
-            // Session capture completed! Move to editing phase
             setTimeout(() => {
               if (room) {
                 room.status = 'editing';
@@ -196,10 +201,16 @@ export function setupRoomHandlers(io: Server, socket: Socket) {
     });
   });
 
-  // Handle WebRTC Peer Signaling
+  // Handle WebRTC Peer Signaling (Offer, Answer, ICE Candidate)
   socket.on('webrtc_signal', ({ roomCode, targetSocketId, signal, senderUserId }) => {
     if (targetSocketId) {
       io.to(targetSocketId).emit('webrtc_signal', {
+        senderSocketId: socket.id,
+        senderUserId,
+        signal
+      });
+    } else {
+      socket.to(`room:${roomCode.toUpperCase()}`).emit('webrtc_signal', {
         senderSocketId: socket.id,
         senderUserId,
         signal
@@ -213,13 +224,10 @@ export function setupRoomHandlers(io: Server, socket: Socket) {
       const index = room.members.findIndex(m => m.socketId === socket.id);
       if (index !== -1) {
         const member = room.members[index];
-        // Leave room
         room.members.splice(index, 1);
-        if (room.members.length === 0) {
-          // Keep room in memory for 10 minutes before cleanup
-        } else {
+        if (room.members.length > 0) {
           if (member.isHost && room.members.length > 0) {
-            room.members[0].isHost = true; // Reassign host
+            room.members[0].isHost = true;
           }
           io.to(`room:${code}`).emit('room_state_updated', { room });
         }

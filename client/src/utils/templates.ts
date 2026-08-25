@@ -2,6 +2,21 @@ import { Template } from '../types';
 
 export const DEFAULT_TEMPLATES: Template[] = [
   {
+    id: 'life4cuts_korean',
+    name: 'Life 4 Cuts (인생네컷 8-Cut)',
+    category: 'minimalist',
+    primaryColor: '#ffffff',
+    secondaryColor: '#0a0a0a',
+    accentColor: '#e11d48',
+    fontFamily: 'sans-serif',
+    headerText: '인생네컷',
+    subText: 'JIEUN FOUR CUTS',
+    badgeText: 'KOREAN 8-CUTS',
+    frameStyle: 'life4cuts_grid',
+    slots: 8,
+    aspectRatio: '2x4'
+  },
+  {
     id: 'studio_clean_white',
     name: 'Clean Studio White',
     category: 'minimalist',

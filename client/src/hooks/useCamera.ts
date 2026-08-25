@@ -37,8 +37,8 @@ export function useCamera() {
     setHasPermission(true);
 
     const canvas = document.createElement('canvas');
-    canvas.width = 640;
-    canvas.height = 480;
+    canvas.width = 1280;
+    canvas.height = 720;
     const ctx = canvas.getContext('2d');
     
     if (!ctx) return;
@@ -49,34 +49,34 @@ export function useCamera() {
     const renderVirtual = () => {
       angle += 0.03;
       
-      const gradient = ctx.createLinearGradient(0, 0, 640, 480);
+      const gradient = ctx.createLinearGradient(0, 0, 1280, 720);
       gradient.addColorStop(0, '#1e1b4b');
       gradient.addColorStop(0.5, '#4c1d95');
       gradient.addColorStop(1, '#831843');
       ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, 640, 480);
+      ctx.fillRect(0, 0, 1280, 720);
 
       ctx.fillStyle = '#fef08a';
       ctx.beginPath();
-      ctx.arc(320, 240, 110 + Math.sin(angle) * 8, 0, Math.PI * 2);
+      ctx.arc(640, 360, 140 + Math.sin(angle) * 10, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.fillStyle = '#18181b';
       ctx.beginPath();
-      ctx.arc(280, 210, 14, 0, Math.PI * 2);
-      ctx.arc(360, 210, 14, 0, Math.PI * 2);
+      ctx.arc(580, 320, 18, 0, Math.PI * 2);
+      ctx.arc(700, 320, 18, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.beginPath();
-      ctx.arc(320, 240, 50, 0.1 * Math.PI, 0.9 * Math.PI);
-      ctx.lineWidth = 10;
+      ctx.arc(640, 360, 70, 0.1 * Math.PI, 0.9 * Math.PI);
+      ctx.lineWidth = 12;
       ctx.strokeStyle = '#18181b';
       ctx.stroke();
 
       ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-      ctx.font = 'bold 20px "Space Grotesk", sans-serif';
+      ctx.font = 'bold 28px "Space Grotesk", sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('📷 VIRTUAL DEMO WEBCAM', 320, 430);
+      ctx.fillText('VIRTUAL DEMO WEBCAM', 640, 640);
 
       animFrame = requestAnimationFrame(renderVirtual);
     };
@@ -87,15 +87,16 @@ export function useCamera() {
     setStream(virtualStream);
   }, [setCameraActive, setUsingVirtualCamera]);
 
-  // Start Physical Camera
+  // Start Physical Camera with explicit constraints
   const startCamera = useCallback(async () => {
     try {
       setCameraError(null);
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: {
+          facingMode: 'user',
           width: { ideal: 1280 },
           height: { ideal: 720 },
-          facingMode: 'user'
+          aspectRatio: { ideal: 16 / 9 }
         },
         audio: false
       });
@@ -125,7 +126,7 @@ export function useCamera() {
     setUsingVirtualCamera(false);
   }, [stream, setCameraActive, setUsingVirtualCamera]);
 
-  // Capture Snapshot Frame Data URL
+  // Capture Snapshot Frame Data URL with dynamic center cropping to prevent image stretching
   const captureSnapshot = useCallback((): string => {
     const canvas = document.createElement('canvas');
     canvas.width = 1280;
@@ -135,14 +136,33 @@ export function useCamera() {
     if (!ctx) return '';
 
     if (videoRef.current && (videoRef.current.readyState >= 2 || usingVirtualCamera)) {
+      const video = videoRef.current;
+      const vw = video.videoWidth || 1280;
+      const vh = video.videoHeight || 720;
+      const targetAspect = canvas.width / canvas.height; // 16:9
+      const sourceAspect = vw / vh;
+
+      let sx = 0;
+      let sy = 0;
+      let sw = vw;
+      let sh = vh;
+
+      if (sourceAspect > targetAspect) {
+        sw = vh * targetAspect;
+        sx = (vw - sw) / 2;
+      } else {
+        sh = vw / targetAspect;
+        sy = (vh - sh) / 2;
+      }
+
       if (mirrorCamera && !usingVirtualCamera) {
         ctx.translate(canvas.width, 0);
         ctx.scale(-1, 1);
       }
 
-      ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
     } else {
-      ctx.fillStyle = '#27272a';
+      ctx.fillStyle = '#18181b';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 36px sans-serif';

@@ -1,10 +1,12 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useRoomStore } from '../../store/useRoomStore';
-import { Camera, Sparkles, VideoOff, RefreshCw } from 'lucide-react';
+import { Camera, Sparkles, VideoOff, Users } from 'lucide-react';
 
 interface CameraPreviewProps {
   videoRef: React.RefObject<HTMLVideoElement | null>;
   stream?: MediaStream | null;
+  peerStream?: MediaStream | null;
+  peerUsername?: string;
   isLive?: boolean;
   username?: string;
   isHost?: boolean;
@@ -14,11 +16,14 @@ interface CameraPreviewProps {
 export const CameraPreview: React.FC<CameraPreviewProps> = ({
   videoRef,
   stream,
+  peerStream,
+  peerUsername,
   username = 'You',
   isHost = false,
   readyStatus = false
 }) => {
-  const { mirrorCamera, activeFilter, usingVirtualCamera, isCameraActive } = useRoomStore();
+  const { mirrorCamera, activeFilter, usingVirtualCamera, isCameraActive, room } = useRoomStore();
+  const peerVideoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     if (videoRef.current) {
@@ -33,6 +38,13 @@ export const CameraPreview: React.FC<CameraPreviewProps> = ({
     }
   }, [videoRef, stream, isCameraActive]);
 
+  useEffect(() => {
+    if (peerVideoRef.current && peerStream) {
+      peerVideoRef.current.srcObject = peerStream;
+      peerVideoRef.current.play().catch(() => {});
+    }
+  }, [peerStream]);
+
   const getFilterStyle = () => {
     switch (activeFilter) {
       case 'vintage': return 'sepia(0.5) contrast(1.1) brightness(0.95)';
@@ -45,67 +57,113 @@ export const CameraPreview: React.FC<CameraPreviewProps> = ({
     }
   };
 
+  const hasPeer = room && room.members.length > 1;
+  const peerMember = room?.members.find(m => m.username !== username);
+
   return (
-    <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-zinc-900 border border-zinc-800 shadow-2xl group">
-      {/* Video Element Always Mounted for Ref Binding */}
-      <video
-        ref={videoRef as React.RefObject<HTMLVideoElement>}
-        autoPlay
-        playsInline
-        muted
-        style={{
-          transform: mirrorCamera && !usingVirtualCamera ? 'scaleX(-1)' : 'none',
-          filter: getFilterStyle()
-        }}
-        className={`h-full w-full object-cover transition-all duration-300 ${
-          isCameraActive ? 'block' : 'hidden'
-        }`}
-      />
+    <div className={`grid gap-3 w-full ${hasPeer ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
+      {/* Player 1 Camera Container */}
+      <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-zinc-900 border border-zinc-800 shadow-2xl group">
+        <video
+          ref={videoRef as React.RefObject<HTMLVideoElement>}
+          autoPlay
+          playsInline
+          muted
+          style={{
+            transform: mirrorCamera && !usingVirtualCamera ? 'scaleX(-1)' : 'none',
+            filter: getFilterStyle()
+          }}
+          className={`h-full w-full object-cover transition-all duration-300 ${
+            isCameraActive ? 'block' : 'hidden'
+          }`}
+        />
 
-      {!isCameraActive && (
-        <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-zinc-900 text-zinc-400">
-          <VideoOff className="h-12 w-12 text-zinc-600 animate-pulse" />
-          <p className="text-sm font-medium">Camera Offline</p>
-        </div>
-      )}
-
-      {/* Face Framing Guide Overlay */}
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-30 group-hover:opacity-60 transition-opacity">
-        <div className="h-48 w-40 rounded-full border-2 border-dashed border-rose-400/60" />
-      </div>
-
-      {/* User Info Badge */}
-      <div className="absolute top-3 left-3 flex items-center gap-2 rounded-full bg-black/60 backdrop-blur-md px-3 py-1.5 text-xs font-semibold text-white border border-white/10">
-        <span className="relative flex h-2 w-2">
-          <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${readyStatus ? 'bg-emerald-400' : 'bg-amber-400'} opacity-75`}></span>
-          <span className={`relative inline-flex h-2 w-2 rounded-full ${readyStatus ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-        </span>
-        <span>{username}</span>
-        {isHost && (
-          <span className="rounded bg-rose-500/20 px-1.5 py-0.5 text-[10px] font-bold text-rose-300 border border-rose-500/30">
-            HOST
-          </span>
+        {!isCameraActive && (
+          <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-zinc-900 text-zinc-400">
+            <VideoOff className="h-12 w-12 text-zinc-600 animate-pulse" />
+            <p className="text-sm font-medium">Camera Offline</p>
+          </div>
         )}
+
+        {/* Face Framing Guide Overlay */}
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-30 group-hover:opacity-60 transition-opacity">
+          <div className="h-44 w-36 rounded-full border-2 border-dashed border-rose-400/60" />
+        </div>
+
+        {/* User Info Badge */}
+        <div className="absolute top-3 left-3 flex items-center gap-2 rounded-full bg-black/60 backdrop-blur-md px-3 py-1.5 text-xs font-semibold text-white border border-white/10">
+          <span className="relative flex h-2 w-2">
+            <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${readyStatus ? 'bg-emerald-400' : 'bg-amber-400'} opacity-75`}></span>
+            <span className={`relative inline-flex h-2 w-2 rounded-full ${readyStatus ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+          </span>
+          <span>{username}</span>
+          {isHost && (
+            <span className="rounded bg-rose-500/20 px-1.5 py-0.5 text-[10px] font-bold text-rose-300 border border-rose-500/30">
+              HOST
+            </span>
+          )}
+        </div>
+
+        {/* Virtual Camera Indicator */}
+        {usingVirtualCamera && (
+          <div className="absolute top-3 right-3 flex items-center gap-1.5 rounded-full bg-indigo-500/30 backdrop-blur-md px-2.5 py-1 text-[11px] font-medium text-indigo-200 border border-indigo-500/40">
+            <Sparkles className="h-3 w-3 text-indigo-400 animate-spin" />
+            <span>Virtual Cam</span>
+          </div>
+        )}
+
+        {/* Ready Badge */}
+        <div className="absolute bottom-3 right-3">
+          <span className={`rounded-full px-3 py-1 text-xs font-semibold shadow-lg backdrop-blur-md ${
+            readyStatus 
+              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' 
+              : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+          }`}>
+            {readyStatus ? 'READY ✓' : 'NOT READY'}
+          </span>
+        </div>
       </div>
 
-      {/* Virtual Camera Indicator */}
-      {usingVirtualCamera && (
-        <div className="absolute top-3 right-3 flex items-center gap-1.5 rounded-full bg-indigo-500/30 backdrop-blur-md px-2.5 py-1 text-[11px] font-medium text-indigo-200 border border-indigo-500/40">
-          <Sparkles className="h-3 w-3 text-indigo-400 animate-spin" />
-          <span>Virtual Camera</span>
+      {/* Player 2 Peer Camera Container (If 2 Players in Room) */}
+      {hasPeer && (
+        <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-zinc-900 border border-zinc-800 shadow-2xl group">
+          {peerStream ? (
+            <video
+              ref={peerVideoRef}
+              autoPlay
+              playsInline
+              style={{ filter: getFilterStyle() }}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-zinc-900 text-zinc-400 p-4 text-center">
+              <Users className="h-10 w-10 text-rose-400 animate-bounce" />
+              <div>
+                <p className="text-xs font-bold text-zinc-200">{peerMember?.username || peerUsername || 'Peer Player'}</p>
+                <p className="text-[11px] text-zinc-500 font-medium">In Room • Camera Sync Ready</p>
+              </div>
+            </div>
+          )}
+
+          {/* User Info Badge for Player 2 */}
+          <div className="absolute top-3 left-3 flex items-center gap-2 rounded-full bg-black/60 backdrop-blur-md px-3 py-1.5 text-xs font-semibold text-white border border-white/10">
+            <span className="relative flex h-2 w-2">
+              <span className={`relative inline-flex h-2 w-2 rounded-full ${peerMember?.readyStatus ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+            </span>
+            <span>{peerMember?.username || peerUsername || 'Peer Player'}</span>
+          </div>
+
+          <div className="absolute bottom-3 right-3">
+            <span className={`rounded-full px-3 py-1 text-xs font-semibold shadow-lg backdrop-blur-md ${
+              peerMember?.readyStatus 
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' 
+                : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+            }`}>
+              {peerMember?.readyStatus ? 'READY ✓' : 'NOT READY'}
+            </span>
+          </div>
         </div>
       )}
-
-      {/* Ready Badge */}
-      <div className="absolute bottom-3 right-3">
-        <span className={`rounded-full px-3 py-1 text-xs font-semibold shadow-lg backdrop-blur-md ${
-          readyStatus 
-            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' 
-            : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-        }`}>
-          {readyStatus ? 'READY ✓' : 'NOT READY'}
-        </span>
-      </div>
     </div>
   );
 };

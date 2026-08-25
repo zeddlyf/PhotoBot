@@ -40,7 +40,6 @@ export default function handler(req, res) {
 
         let room = rooms.get(roomCode);
 
-        // On-demand serverless fallback recovery if room cold-started
         if (!room) {
           const roomId = crypto.randomUUID();
           const hostId = crypto.randomUUID();
@@ -49,9 +48,9 @@ export default function handler(req, res) {
             roomCode,
             roomName: `Photo Booth (${roomCode})`,
             hostId,
-            templateId: 'studio_clean_white',
+            templateId: 'life4cuts_korean',
             status: 'lobby',
-            maxPhotos: 4,
+            maxPhotos: 8,
             countdownSeconds: 3,
             members: [],
             capturedPhotos: {},
@@ -70,6 +69,15 @@ export default function handler(req, res) {
         }
 
         const existingUser = room.members.find(m => m.username.toLowerCase() === (username || '').toLowerCase());
+        
+        // Enforce 2-Player Maximum Constraint
+        if (!existingUser && room.members.length >= 2) {
+          return res.status(403).json({
+            success: false,
+            message: 'Room is full (Maximum 2 players allowed)'
+          });
+        }
+
         const userId = existingUser ? existingUser.id : crypto.randomUUID();
 
         if (!existingUser && username) {
@@ -103,9 +111,9 @@ export default function handler(req, res) {
         roomCode,
         roomName: roomName || `${hostName}'s Photo Booth`,
         hostId,
-        templateId: templateId || 'studio_clean_white',
+        templateId: templateId || 'life4cuts_korean',
         status: 'lobby',
-        maxPhotos: Number(maxPhotos) || 4,
+        maxPhotos: Number(maxPhotos) || 8,
         countdownSeconds: Number(countdownSeconds) || 3,
         members: [
           {
@@ -122,7 +130,7 @@ export default function handler(req, res) {
             id: crypto.randomUUID(),
             userId: 'system',
             username: 'System',
-            text: `Welcome to ${roomName || 'SnapTogether'}! Share code ${roomCode} with friends!`,
+            text: `Welcome to ${roomName || 'SnapTogether'}! Share code ${roomCode} with your friend!`,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           }
         ],
