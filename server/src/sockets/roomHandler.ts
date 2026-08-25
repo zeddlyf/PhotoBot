@@ -15,9 +15,9 @@ export function setupRoomHandlers(io: Server, socket: Socket) {
       return;
     }
 
-    // Enforce 2-Player Maximum Constraint
+    // Enforce 2-Player Maximum Constraint if Duo Mode
     const isExisting = room.members.some(m => m.id === userId);
-    if (!isExisting && room.members.length >= 2) {
+    if (!isExisting && room.boothMode !== 'solo' && room.members.length >= 2) {
       socket.emit('error_message', { message: 'Room is full (Maximum 2 players allowed)' });
       return;
     }
@@ -78,25 +78,27 @@ export function setupRoomHandlers(io: Server, socket: Socket) {
   });
 
   // Handle host settings update (countdown duration, max photos)
-  socket.on('update_settings', ({ roomCode, countdownSeconds, maxPhotos }) => {
+  socket.on('update_settings', ({ roomCode, countdownSeconds, maxPhotos, boothMode }) => {
     const code = roomCode.toUpperCase();
     const room = memoryRooms.get(code);
     if (!room) return;
 
     if (countdownSeconds !== undefined) room.countdownSeconds = Number(countdownSeconds);
     if (maxPhotos !== undefined) room.maxPhotos = Number(maxPhotos);
+    if (boothMode !== undefined) room.boothMode = boothMode;
 
     io.to(`room:${code}`).emit('room_state_updated', { room });
   });
 
-  // Handle synchronized session start countdown (Turn-Based vs Synchronized Dual)
+  // Handle synchronized session start countdown (Solo vs Turn-Based vs Synchronized Dual)
   socket.on('start_session', ({ roomCode }) => {
     const code = roomCode.toUpperCase();
     const room = memoryRooms.get(code);
     if (!room) return;
 
     const template = DEFAULT_TEMPLATES.find(t => t.id === room.templateId) || DEFAULT_TEMPLATES[0];
-    const isDual = template.captureMode === 'synchronized_dual';
+    const isSolo = room.boothMode === 'solo' || room.members.length === 1;
+    const isDual = !isSolo && template.captureMode === 'synchronized_dual';
 
     room.status = 'capturing';
     room.capturedPhotos = {}; // Reset photos
@@ -105,23 +107,26 @@ export function setupRoomHandlers(io: Server, socket: Socket) {
     const duration = room.countdownSeconds || 3;
 
     // Total shutter cycles:
-    // Turn-based 4-Cut: 4 cycles
-    // Dual 8-Cut (2x4): 4 cycles (captures 2 slots per cycle)
-    // Dual 4-Cut (2x2): 2 cycles (captures 2 slots per cycle)
-    const totalCycles = isDual ? (template.slots === 8 ? 4 : 2) : 4;
+    // Solo Mode: All template.slots captured consecutively (1 cycle per slot)
+    // Duo Synchronized 8-Cut (2x4): 4 cycles (captures 2 slots per cycle)
+    // Duo Synchronized 4-Cut (2x2): 2 cycles (captures 2 slots per cycle)
+    // Duo Turn-based 4-Cut: 4 cycles
+    const totalCycles = isSolo ? template.slots : (isDual ? (template.slots === 8 ? 4 : 2) : 4);
 
     let currentCycle = 0;
 
     function runCycleCapture() {
-      // Determine active turn for current cycle
-      let activeTurn: 'host' | 'joiner' | 'both' = 'both';
+      let activeTurn: 'host' | 'joiner' | 'both' | 'solo' = 'solo';
       let targetSlotIndex = currentCycle;
 
-      if (isDual) {
+      if (isSolo) {
+        activeTurn = 'solo';
+        targetSlotIndex = currentCycle;
+      } else if (isDual) {
         activeTurn = 'both';
         targetSlotIndex = currentCycle * 2; // Left slot index
       } else {
-        // Turn-Based sequence: Cycle 0 = Host, Cycle 1 = Joiner, Cycle 2 = Host, Cycle 3 = Joiner
+        // Duo Turn-Based sequence: Cycle 0 = Host, Cycle 1 = Joiner, Cycle 2 = Host, Cycle 3 = Joiner
         activeTurn = currentCycle % 2 === 0 ? 'host' : 'joiner';
       }
 
@@ -135,7 +140,8 @@ export function setupRoomHandlers(io: Server, socket: Socket) {
         totalSlots: template.slots,
         currentSlot: targetSlotIndex,
         activeTurn,
-        isDual
+        isDual,
+        isSolo
       });
 
       let timer = duration;
@@ -145,7 +151,8 @@ export function setupRoomHandlers(io: Server, socket: Socket) {
           currentSecond: timer,
           currentSlot: targetSlotIndex,
           activeTurn,
-          isDual
+          isDual,
+          isSolo
         });
 
         if (timer <= 0) {
@@ -155,7 +162,8 @@ export function setupRoomHandlers(io: Server, socket: Socket) {
           io.to(`room:${code}`).emit('shutter_snap', {
             slotIndex: targetSlotIndex,
             activeTurn,
-            isDual
+            isDual,
+            isSolo
           });
 
           currentCycle++;

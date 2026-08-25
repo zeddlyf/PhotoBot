@@ -17,7 +17,7 @@ import { PrintModal } from '../components/photobooth/PrintModal';
 import { QRCodeModal } from '../components/photobooth/QRCodeModal';
 import { TemplateSelector } from '../components/templates/TemplateSelector';
 import { DEFAULT_TEMPLATES } from '../utils/templates';
-import { Copy, Check, Sparkles } from 'lucide-react';
+import { Copy, Check, Sparkles, User, Users } from 'lucide-react';
 
 export const BoothRoom: React.FC = () => {
   const { code } = useParams<{ code: string }>();
@@ -80,17 +80,24 @@ export const BoothRoom: React.FC = () => {
     }
   }, [room?.templateId, setSelectedTemplate]);
 
-  // Role-based Capture handling on shutter snap (Turn-based vs Synchronized Dual)
+  // Role-based Capture handling on shutter snap (Solo vs Turn-based vs Synchronized Dual)
   const isShutterFlashing = useRoomStore(state => state.isShutterFlashing);
   useEffect(() => {
     if (isShutterFlashing && currentUser && room) {
       const activeTurn = room.activeTurn || 'both';
       const isHost = currentUser.isHost;
+      const isSolo = room.boothMode === 'solo' || room.members.length === 1 || activeTurn === 'solo';
 
       const template = DEFAULT_TEMPLATES.find(t => t.id === room.templateId) || DEFAULT_TEMPLATES[0];
-      const isDual = template.captureMode === 'synchronized_dual';
+      const isDual = !isSolo && template.captureMode === 'synchronized_dual';
 
-      if (isDual) {
+      if (isSolo) {
+        // Solo Mode: Capture currentSlotIndex directly
+        const snap = captureSnapshot();
+        if (snap) {
+          sendPhotoCaptured(currentSlotIndex, snap);
+        }
+      } else if (isDual) {
         // Dual Synchronized (8-Cut & Dual 4-Cut): Host -> Left Slot, Joiner -> Right Slot
         const snap = captureSnapshot();
         if (snap) {
@@ -124,6 +131,7 @@ export const BoothRoom: React.FC = () => {
   const isHost = room.members.find(m => m.id === currentUser.id)?.isHost || false;
   const myReadyStatus = room.members.find(m => m.id === currentUser.id)?.readyStatus || false;
   const allMembersReady = room.members.length > 0 && room.members.every(m => m.readyStatus);
+  const isSoloMode = room.boothMode === 'solo' || room.members.length === 1;
 
   const handleCopyLink = () => {
     const inviteUrl = `${window.location.origin}/join?code=${room.roomCode}`;
@@ -144,21 +152,24 @@ export const BoothRoom: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-extrabold text-zinc-100">{room.roomName}</h1>
-            <span className="rounded-full bg-rose-500/20 px-2.5 py-0.5 text-[11px] font-bold text-rose-300 border border-rose-500/30 uppercase">
-              {room.status.toUpperCase()} MODE
+            <span className="rounded-full bg-rose-500/20 px-2.5 py-0.5 text-[11px] font-bold text-rose-300 border border-rose-500/30 uppercase flex items-center gap-1">
+              {isSoloMode ? <User className="h-3 w-3" /> : <Users className="h-3 w-3" />}
+              <span>{isSoloMode ? 'SOLO MODE' : 'DUO MODE'}</span>
             </span>
           </div>
           <p className="text-xs text-zinc-400">Room Code: <span className="font-bold text-zinc-200 tracking-wider">{room.roomCode}</span></p>
         </div>
 
         {/* Copy Invite Link */}
-        <button
-          onClick={handleCopyLink}
-          className="flex items-center gap-2 rounded-xl bg-zinc-800 px-4 py-2.5 text-xs font-semibold text-zinc-200 hover:bg-zinc-700 transition-all"
-        >
-          {copiedLink ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4 text-rose-400" />}
-          <span>{copiedLink ? 'Invite Link Copied!' : 'Copy Invite Link'}</span>
-        </button>
+        {!isSoloMode && (
+          <button
+            onClick={handleCopyLink}
+            className="flex items-center gap-2 rounded-xl bg-zinc-800 px-4 py-2.5 text-xs font-semibold text-zinc-200 hover:bg-zinc-700 transition-all"
+          >
+            {copiedLink ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4 text-rose-400" />}
+            <span>{copiedLink ? 'Invite Link Copied!' : 'Copy Invite Link'}</span>
+          </button>
+        )}
       </div>
 
       {/* Floating Emoji Reaction Bar */}

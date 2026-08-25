@@ -29,7 +29,7 @@ export default function handler(req, res) {
     body = body || {};
 
     if (req.method === 'POST') {
-      const { hostName, roomName, templateId, maxPhotos, countdownSeconds, username, code, action } = body;
+      const { hostName, roomName, templateId, maxPhotos, countdownSeconds, username, code, action, boothMode } = body;
 
       // Handle Join Room request
       if (action === 'join' || code) {
@@ -63,15 +63,16 @@ export default function handler(req, res) {
                 timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
               }
             ],
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            boothMode: boothMode || 'duo'
           };
           rooms.set(roomCode, room);
         }
 
         const existingUser = room.members.find(m => m.username.toLowerCase() === (username || '').toLowerCase());
         
-        // Enforce 2-Player Maximum Constraint
-        if (!existingUser && room.members.length >= 2) {
+        // Enforce 2-Player Maximum Constraint if Duo Mode
+        if (!existingUser && room.boothMode !== 'solo' && room.members.length >= 2) {
           return res.status(403).json({
             success: false,
             message: 'Room is full (Maximum 2 players allowed)'
@@ -134,7 +135,8 @@ export default function handler(req, res) {
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           }
         ],
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        boothMode: boothMode || 'duo'
       };
 
       rooms.set(roomCode, newRoom);

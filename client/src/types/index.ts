@@ -11,6 +11,8 @@ export type EventCategory = 'wedding' | 'birthday' | 'graduation' | 'holiday' | 
 
 export type CaptureMode = 'turn_based' | 'synchronized_dual';
 
+export type BoothMode = 'solo' | 'duo';
+
 export interface Template {
   id: string;
   name: string;
@@ -41,7 +43,8 @@ export interface Room {
   capturedPhotos: { [slotIndex: number]: string };
   chatMessages: ChatMessage[];
   createdAt: string;
-  activeTurn?: 'host' | 'joiner' | 'both';
+  boothMode?: BoothMode;
+  activeTurn?: 'host' | 'joiner' | 'both' | 'solo';
 }
 
 export interface ChatMessage {

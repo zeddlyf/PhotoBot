@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useRoomStore } from '../store/useRoomStore';
 import { TemplateSelector } from '../components/templates/TemplateSelector';
 import { DEFAULT_TEMPLATES } from '../utils/templates';
-import { Camera, User as UserIcon, Settings, Timer } from 'lucide-react';
+import { Camera, User as UserIcon, Settings, Timer, Users, User } from 'lucide-react';
 
 export const getApiUrl = (endpoint: string) => {
   const socketUrl = import.meta.env.VITE_SOCKET_URL;
@@ -21,6 +21,7 @@ export const CreateRoom: React.FC = () => {
   const [hostName, setHostName] = useState('');
   const [roomName, setRoomName] = useState('');
   const [selectedTemplateId, setSelectedTemplateId] = useState('life4cuts_korean');
+  const [boothMode, setBoothMode] = useState<'solo' | 'duo'>('duo');
   const [countdownSeconds, setCountdownSeconds] = useState(3);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -41,7 +42,8 @@ export const CreateRoom: React.FC = () => {
           roomName: roomName.trim() || `${hostName}'s Photo Booth`,
           templateId: selectedTemplateId,
           maxPhotos: selectedTempObj.slots,
-          countdownSeconds
+          countdownSeconds,
+          boothMode
         })
       });
 
@@ -108,6 +110,51 @@ export const CreateRoom: React.FC = () => {
           </div>
         </div>
 
+        {/* Photobooth Mode Selector Card (Solo vs Duo) */}
+        <div className="rounded-3xl glass-panel p-6 border border-white/10 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs font-bold text-zinc-300 uppercase tracking-wider">
+              <Users className="h-4 w-4 text-rose-400" />
+              <span>Select Photobooth Mode</span>
+            </div>
+            <span className="text-[11px] text-zinc-500 font-medium">Solo or Multiplayer Duo</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div
+              onClick={() => setBoothMode('solo')}
+              className={`cursor-pointer rounded-2xl p-4 border transition-all ${
+                boothMode === 'solo'
+                  ? 'bg-rose-500/15 border-rose-500/80 text-white shadow-lg'
+                  : 'bg-white/[0.03] border-white/10 text-zinc-400 hover:border-white/20'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-rose-400 uppercase">Solo Mode</span>
+                <User className="h-4 w-4 text-rose-400" />
+              </div>
+              <p className="text-[11px] text-zinc-300 font-medium">1 Player Solo Session</p>
+              <p className="text-[10px] text-zinc-500 mt-1">Shoot all photos sequentially by yourself across any layout.</p>
+            </div>
+
+            <div
+              onClick={() => setBoothMode('duo')}
+              className={`cursor-pointer rounded-2xl p-4 border transition-all ${
+                boothMode === 'duo'
+                  ? 'bg-rose-500/15 border-rose-500/80 text-white shadow-lg'
+                  : 'bg-white/[0.03] border-white/10 text-zinc-400 hover:border-white/20'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-indigo-400 uppercase">Duo Mode</span>
+                <Users className="h-4 w-4 text-indigo-400" />
+              </div>
+              <p className="text-[11px] text-zinc-300 font-medium">2 Players Multiplayer</p>
+              <p className="text-[10px] text-zinc-500 mt-1">Turn-based alternating shots or synchronized dual camera sync.</p>
+            </div>
+          </div>
+        </div>
+
         {/* Capture Settings Card */}
         <div className="rounded-3xl glass-panel p-6 border border-white/10 space-y-4">
           <div className="flex items-center gap-2 text-xs font-bold text-zinc-300 uppercase tracking-wider">
@@ -146,7 +193,7 @@ export const CreateRoom: React.FC = () => {
           className="w-full flex items-center justify-center gap-2 rounded-full bg-rose-600 py-4 text-sm font-bold uppercase tracking-wider text-white hover:bg-rose-500 shadow-xl shadow-rose-600/25 disabled:opacity-40 transition-all"
         >
           <Camera className="h-4 w-4" />
-          <span>{isLoading ? 'Creating Room...' : 'LAUNCH STUDIO ROOM'}</span>
+          <span>{isLoading ? 'Creating Room...' : `LAUNCH ${boothMode.toUpperCase()} STUDIO ROOM`}</span>
         </button>
       </form>
     </div>

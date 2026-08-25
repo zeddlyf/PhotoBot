@@ -14,7 +14,10 @@ export const CountdownOverlay: React.FC = () => {
   let turnTitle = "DUAL POSE! BOTH PLAYERS SMILE!";
   let isMyTurn = true;
 
-  if (activeTurn === 'host') {
+  if (activeTurn === 'solo' || room.boothMode === 'solo') {
+    isMyTurn = true;
+    turnTitle = "SOLO POSE — GET READY!";
+  } else if (activeTurn === 'host') {
     isMyTurn = isHost;
     turnTitle = isHost ? "YOUR TURN — POSE NOW!" : "HOST'S TURN — OBSERVE & SMILE!";
   } else if (activeTurn === 'joiner') {
@@ -36,7 +39,7 @@ export const CountdownOverlay: React.FC = () => {
             ? 'bg-rose-600 text-white border-rose-400 shadow-rose-600/30 animate-pulse'
             : 'bg-zinc-800 text-zinc-300 border-zinc-700'
         }`}>
-          {activeTurn === 'both' ? <Users className="h-4 w-4" /> : <User className="h-4 w-4" />}
+          {activeTurn === 'solo' || room.boothMode === 'solo' ? <User className="h-4 w-4" /> : (activeTurn === 'both' ? <Users className="h-4 w-4" /> : <User className="h-4 w-4" />)}
           <span>{turnTitle}</span>
         </div>
 

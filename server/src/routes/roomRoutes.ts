@@ -16,7 +16,7 @@ function generateRoomCode(): string {
 // POST /api/rooms - Create Room OR Join Room
 router.post('/', (req, res) => {
   try {
-    const { hostName, roomName, templateId, maxPhotos, countdownSeconds, action, code, username } = req.body;
+    const { hostName, roomName, templateId, maxPhotos, countdownSeconds, action, code, username, boothMode } = req.body;
 
     // Handle Join Room request if action === 'join' or code is provided
     if (action === 'join' || code) {
@@ -27,7 +27,6 @@ router.post('/', (req, res) => {
 
       let room = memoryRooms.get(roomCode);
 
-      // On-demand serverless / multi-instance fallback recovery if room in memory was cold-started
       if (!room) {
         const roomId = uuidv4();
         const hostId = uuidv4();
@@ -36,9 +35,9 @@ router.post('/', (req, res) => {
           roomCode,
           roomName: `Photo Booth (${roomCode})`,
           hostId,
-          templateId: 'studio_clean_white',
+          templateId: 'life4cuts_korean',
           status: 'lobby',
-          maxPhotos: 4,
+          maxPhotos: 8,
           countdownSeconds: 3,
           members: [],
           capturedPhotos: {},
@@ -51,12 +50,21 @@ router.post('/', (req, res) => {
               timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             }
           ],
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          boothMode: boothMode || 'duo'
         };
         memoryRooms.set(roomCode, room);
       }
 
       const existingUser = room.members.find(m => m.username.toLowerCase() === (username || '').toLowerCase());
+      
+      if (!existingUser && room.boothMode !== 'solo' && room.members.length >= 2) {
+        return res.status(403).json({
+          success: false,
+          message: 'Room is full (Maximum 2 players allowed)'
+        });
+      }
+
       const userId = existingUser ? existingUser.id : uuidv4();
 
       if (!existingUser && username) {
@@ -90,9 +98,9 @@ router.post('/', (req, res) => {
       roomCode,
       roomName: roomName || `${hostName}'s Photo Booth`,
       hostId,
-      templateId: templateId || 'studio_clean_white',
+      templateId: templateId || 'life4cuts_korean',
       status: 'lobby',
-      maxPhotos: Number(maxPhotos) || 4,
+      maxPhotos: Number(maxPhotos) || 8,
       countdownSeconds: Number(countdownSeconds) || 3,
       members: [
         {
@@ -113,7 +121,8 @@ router.post('/', (req, res) => {
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ],
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      boothMode: boothMode || 'duo'
     };
 
     memoryRooms.set(roomCode, newRoom);
@@ -140,65 +149,6 @@ router.get('/:code', (req, res) => {
   }
 
   res.json({ success: true, room });
-});
-
-// POST /api/rooms/:code/join - Join room legacy endpoint
-router.post('/:code/join', (req, res) => {
-  const code = req.params.code.toUpperCase();
-  const { username } = req.body;
-
-  if (!username) {
-    return res.status(400).json({ success: false, message: 'Username is required' });
-  }
-
-  let room = memoryRooms.get(code);
-
-  if (!room) {
-    const roomId = uuidv4();
-    const hostId = uuidv4();
-    room = {
-      id: roomId,
-      roomCode: code,
-      roomName: `Photo Booth (${code})`,
-      hostId,
-      templateId: 'studio_clean_white',
-      status: 'lobby',
-      maxPhotos: 4,
-      countdownSeconds: 3,
-      members: [],
-      capturedPhotos: {},
-      chatMessages: [
-        {
-          id: uuidv4(),
-          userId: 'system',
-          username: 'System',
-          text: `Welcome to SnapTogether room ${code}!`,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }
-      ],
-      createdAt: new Date().toISOString()
-    };
-    memoryRooms.set(code, room);
-  }
-
-  const existingUser = room.members.find(m => m.username.toLowerCase() === username.toLowerCase());
-  const userId = existingUser ? existingUser.id : uuidv4();
-
-  if (!existingUser) {
-    room.members.push({
-      id: userId,
-      username,
-      isHost: room.members.length === 0,
-      readyStatus: false,
-      socketId: ''
-    });
-  }
-
-  res.json({
-    success: true,
-    user: { id: userId, username, isHost: room.members.length === 1 || existingUser?.isHost || false },
-    room
-  });
 });
 
 export default router;

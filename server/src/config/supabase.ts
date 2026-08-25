@@ -36,7 +36,8 @@ export interface MemoryRoom {
     timestamp: string;
   }>;
   createdAt: string;
-  activeTurn?: 'host' | 'joiner' | 'both';
+  boothMode?: 'solo' | 'duo';
+  activeTurn?: 'host' | 'joiner' | 'both' | 'solo';
 }
 
 export const memoryRooms: Map<string, MemoryRoom> = new Map();
