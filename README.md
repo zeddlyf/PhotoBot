@@ -41,19 +41,46 @@
 
 ---
 
-## 🛠️ Technology Stack
+## 🌐 Deployment Guide (Step-by-Step)
 
-### Frontend (`client/`)
-- **Framework**: React 19, TypeScript, Vite
-- **Styling**: Tailwind CSS v4, Lucide Icons
-- **State Management**: Zustand
-- **Realtime Connection**: Socket.IO Client
-- **Canvas Rendering**: Custom HTML5 Canvas Engine, Canvas-Confetti, QRCode.React
+Because SnapTogether uses **Socket.IO** for real-time multiplayer synchronization, deployment is split into two parts:
+1. **Frontend (Vercel)**: Hosts the React / Vite application.
+2. **Backend Server (Render / Railway)**: Hosts the Node.js + Socket.IO server.
 
-### Backend (`server/`)
-- **Runtime**: Node.js, Express, TypeScript
-- **Realtime Protocol**: Socket.IO, WebRTC Signaling
-- **Database Connection**: Supabase PostgreSQL with in-memory fallback store
+---
+
+### Step 1: Deploy Backend Server (Render or Railway)
+
+WebSockets require a persistent Node server process. You can deploy the backend to [Render.com](https://render.com) or [Railway.app](https://railway.app) for free:
+
+#### Using Render:
+1. Push your code to a GitHub repository.
+2. Go to [Render Dashboard](https://dashboard.render.com/) and click **New -> Web Service**.
+3. Connect your GitHub repository.
+4. Set the following settings:
+   - **Root Directory**: `server`
+   - **Environment**: `Node`
+   - **Build Command**: `npm install && npm run build`
+   - **Start Command**: `npm run start`
+5. Click **Create Web Service**.
+6. Once deployed, copy your backend URL e.g. `https://snaptogether-server.onrender.com`.
+
+---
+
+### Step 2: Deploy Frontend Client to Vercel
+
+1. Log into your [Vercel Dashboard](https://vercel.com/dashboard).
+2. Click **Add New -> Project** and import your GitHub repository.
+3. In the project setup screen:
+   - **Framework Preset**: `Vite`
+   - **Root Directory**: Select `client` (Click Edit next to Root Directory and pick `client`).
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+4. Expand **Environment Variables** and add:
+   - `VITE_SOCKET_URL` = `https://snaptogether-server.onrender.com` (Your deployed backend URL from Step 1)
+   - `VITE_SUPABASE_URL` = *(Optional: Your Supabase Project URL)*
+   - `VITE_SUPABASE_ANON_KEY` = *(Optional: Your Supabase Anon Key)*
+5. Click **Deploy**! Vercel will build and deploy your app.
 
 ---
 
@@ -65,17 +92,14 @@ snaptogether/
 │   ├── public/                 # Static assets
 │   ├── src/
 │   │   ├── components/         # Camera, Room, Photo Strip, and Template UI components
-│   │   │   ├── camera/         # CameraPreview, CameraControls, FilterSelector
-│   │   │   ├── room/           # ParticipantList, HostControls, LiveChat, EmojiReactions
-│   │   │   ├── photobooth/     # CountdownOverlay, PhotoStripCanvas, StickerPicker, PrintModal, QRCodeModal
-│   │   │   └── templates/      # TemplateSelector, TemplateCard
 │   │   ├── hooks/              # useCamera, useSocket
 │   │   ├── pages/              # Home, CreateRoom, JoinRoom, BoothRoom, Gallery, Profile
 │   │   ├── store/              # Zustand room and camera state management
 │   │   ├── types/              # TypeScript definitions
 │   │   └── utils/              # Canvas rendering engine and template presets
 │   ├── package.json
-│   └── vite.config.ts
+│   ├── vite.config.ts
+│   └── vercel.json             # Vercel SPA rewrite config
 │
 ├── server/                     # Backend Application (Node.js + Express + Socket.IO)
 │   ├── src/
@@ -91,63 +115,6 @@ snaptogether/
     ├── api.md                  # REST API & Socket.IO specification
     └── database.md             # Supabase PostgreSQL schema
 ```
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-- **Node.js**: v18.0.0 or higher
-- **npm**: v9.0.0 or higher
-
-### 1. Install Dependencies
-```bash
-# Install root, server, and client dependencies
-npm install
-npm run install:all # or cd client && npm install, cd server && npm install
-```
-
-### 2. Environment Variables
-
-Create `.env` in `server/`:
-```env
-PORT=3001
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your-anon-key-here
-```
-
-Create `.env` in `client/`:
-```env
-VITE_SOCKET_URL=http://localhost:3001
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key-here
-```
-> **Note**: Supabase configuration is optional for local development. An in-memory fallback store runs automatically out of the box if credentials are left blank.
-
-### 3. Run Development Servers
-```bash
-# Terminal 1: Backend Server (Port 3001)
-npm run server
-
-# Terminal 2: Frontend Client (Port 5173)
-npm run dev
-```
-
-Open **`http://localhost:5173`** in your browser to launch SnapTogether!
-
-### 4. Build for Production
-```bash
-npm run build
-```
-
----
-
-## 📖 System Documentation
-
-Detailed technical documentation is available in the `docs/` folder:
-- 📑 [Architecture Overview](docs/architecture.md)
-- 🔌 [API & WebSocket Specifications](docs/api.md)
-- 🗄️ [Database Schema & Supabase Config](docs/database.md)
 
 ---
 
