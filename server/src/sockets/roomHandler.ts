@@ -1,6 +1,7 @@
 import { Server, Socket } from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
 import { memoryRooms } from '../config/supabase';
+import { DEFAULT_TEMPLATES } from '../routes/templateRoutes';
 
 export function setupRoomHandlers(io: Server, socket: Socket) {
   
@@ -88,56 +89,89 @@ export function setupRoomHandlers(io: Server, socket: Socket) {
     io.to(`room:${code}`).emit('room_state_updated', { room });
   });
 
-  // Handle synchronized session start countdown
+  // Handle synchronized session start countdown (Turn-Based vs Synchronized Dual)
   socket.on('start_session', ({ roomCode }) => {
     const code = roomCode.toUpperCase();
     const room = memoryRooms.get(code);
     if (!room) return;
 
+    const template = DEFAULT_TEMPLATES.find(t => t.id === room.templateId) || DEFAULT_TEMPLATES[0];
+    const isDual = template.captureMode === 'synchronized_dual';
+
     room.status = 'capturing';
     room.capturedPhotos = {}; // Reset photos
     io.to(`room:${code}`).emit('room_state_updated', { room });
 
-    // Initiate countdown
     const duration = room.countdownSeconds || 3;
-    const maxPhotos = room.maxPhotos || 8;
 
-    io.to(`room:${code}`).emit('countdown_started', {
-      seconds: duration,
-      totalSlots: maxPhotos,
-      currentSlot: 0
-    });
+    // Total shutter cycles:
+    // Turn-based 4-Cut: 4 cycles
+    // Dual 8-Cut (2x4): 4 cycles (captures 2 slots per cycle)
+    // Dual 4-Cut (2x2): 2 cycles (captures 2 slots per cycle)
+    const totalCycles = isDual ? (template.slots === 8 ? 4 : 2) : 4;
 
-    let currentSlot = 0;
-    
-    function runSlotCapture() {
+    let currentCycle = 0;
+
+    function runCycleCapture() {
+      // Determine active turn for current cycle
+      let activeTurn: 'host' | 'joiner' | 'both' = 'both';
+      let targetSlotIndex = currentCycle;
+
+      if (isDual) {
+        activeTurn = 'both';
+        targetSlotIndex = currentCycle * 2; // Left slot index
+      } else {
+        // Turn-Based sequence: Cycle 0 = Host, Cycle 1 = Joiner, Cycle 2 = Host, Cycle 3 = Joiner
+        activeTurn = currentCycle % 2 === 0 ? 'host' : 'joiner';
+      }
+
+      if (room) {
+        room.activeTurn = activeTurn;
+        io.to(`room:${code}`).emit('room_state_updated', { room });
+      }
+
+      io.to(`room:${code}`).emit('countdown_started', {
+        seconds: duration,
+        totalSlots: template.slots,
+        currentSlot: targetSlotIndex,
+        activeTurn,
+        isDual
+      });
+
       let timer = duration;
       
       const interval = setInterval(() => {
         io.to(`room:${code}`).emit('countdown_tick', {
           currentSecond: timer,
-          currentSlot
+          currentSlot: targetSlotIndex,
+          activeTurn,
+          isDual
         });
 
         if (timer <= 0) {
           clearInterval(interval);
           
           // Trigger shutter snap across clients
-          io.to(`room:${code}`).emit('shutter_snap', { slotIndex: currentSlot });
+          io.to(`room:${code}`).emit('shutter_snap', {
+            slotIndex: targetSlotIndex,
+            activeTurn,
+            isDual
+          });
 
-          currentSlot++;
-          if (currentSlot < maxPhotos) {
+          currentCycle++;
+          if (currentCycle < totalCycles) {
             setTimeout(() => {
-              runSlotCapture();
-            }, 2200);
+              runCycleCapture();
+            }, 2500);
           } else {
             setTimeout(() => {
               if (room) {
                 room.status = 'editing';
+                room.activeTurn = undefined;
                 io.to(`room:${code}`).emit('session_completed', { room });
                 io.to(`room:${code}`).emit('room_state_updated', { room });
               }
-            }, 1500);
+            }, 1800);
           }
         } else {
           timer--;
@@ -145,7 +179,7 @@ export function setupRoomHandlers(io: Server, socket: Socket) {
       }, 1000);
     }
 
-    runSlotCapture();
+    runCycleCapture();
   });
 
   // Handle photo captured data url upload from client
@@ -169,6 +203,7 @@ export function setupRoomHandlers(io: Server, socket: Socket) {
 
     room.status = 'lobby';
     room.capturedPhotos = {};
+    room.activeTurn = undefined;
     io.to(`room:${code}`).emit('room_state_updated', { room });
   });
 

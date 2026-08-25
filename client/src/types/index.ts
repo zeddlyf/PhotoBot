@@ -9,6 +9,8 @@ export interface User {
 
 export type EventCategory = 'wedding' | 'birthday' | 'graduation' | 'holiday' | 'minimalist' | 'y2k';
 
+export type CaptureMode = 'turn_based' | 'synchronized_dual';
+
 export interface Template {
   id: string;
   name: string;
@@ -23,6 +25,7 @@ export interface Template {
   frameStyle: string;
   slots: number;
   aspectRatio: string;
+  captureMode: CaptureMode;
 }
 
 export interface Room {
@@ -38,6 +41,7 @@ export interface Room {
   capturedPhotos: { [slotIndex: number]: string };
   chatMessages: ChatMessage[];
   createdAt: string;
+  activeTurn?: 'host' | 'joiner' | 'both';
 }
 
 export interface ChatMessage {

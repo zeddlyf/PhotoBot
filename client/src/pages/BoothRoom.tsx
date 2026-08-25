@@ -17,7 +17,7 @@ import { PrintModal } from '../components/photobooth/PrintModal';
 import { QRCodeModal } from '../components/photobooth/QRCodeModal';
 import { TemplateSelector } from '../components/templates/TemplateSelector';
 import { DEFAULT_TEMPLATES } from '../utils/templates';
-import { Copy, Check, Users, Sparkles, Share2, Camera } from 'lucide-react';
+import { Copy, Check, Sparkles } from 'lucide-react';
 
 export const BoothRoom: React.FC = () => {
   const { code } = useParams<{ code: string }>();
@@ -28,9 +28,7 @@ export const BoothRoom: React.FC = () => {
     room,
     selectedTemplate,
     setSelectedTemplate,
-    currentSlotIndex,
-    isCountdownActive,
-    isCameraActive
+    currentSlotIndex
   } = useRoomStore();
 
   const {
@@ -82,16 +80,35 @@ export const BoothRoom: React.FC = () => {
     }
   }, [room?.templateId, setSelectedTemplate]);
 
-  // Capture photo when countdown reaches 0 / shutter snaps
+  // Role-based Capture handling on shutter snap (Turn-based vs Synchronized Dual)
   const isShutterFlashing = useRoomStore(state => state.isShutterFlashing);
   useEffect(() => {
-    if (isShutterFlashing) {
-      const snap = captureSnapshot();
-      if (snap) {
-        sendPhotoCaptured(currentSlotIndex, snap);
+    if (isShutterFlashing && currentUser && room) {
+      const activeTurn = room.activeTurn || 'both';
+      const isHost = currentUser.isHost;
+
+      const template = DEFAULT_TEMPLATES.find(t => t.id === room.templateId) || DEFAULT_TEMPLATES[0];
+      const isDual = template.captureMode === 'synchronized_dual';
+
+      if (isDual) {
+        // Dual Synchronized (8-Cut & Dual 4-Cut): Host -> Left Slot, Joiner -> Right Slot
+        const snap = captureSnapshot();
+        if (snap) {
+          const targetSlot = isHost ? currentSlotIndex : currentSlotIndex + 1;
+          sendPhotoCaptured(targetSlot, snap);
+        }
+      } else {
+        // Turn-based 4-Cut: Only capture & upload if it is your active turn!
+        const isMyTurn = (activeTurn === 'host' && isHost) || (activeTurn === 'joiner' && !isHost) || activeTurn === 'both';
+        if (isMyTurn) {
+          const snap = captureSnapshot();
+          if (snap) {
+            sendPhotoCaptured(currentSlotIndex, snap);
+          }
+        }
       }
     }
-  }, [isShutterFlashing, captureSnapshot, sendPhotoCaptured, currentSlotIndex]);
+  }, [isShutterFlashing, captureSnapshot, sendPhotoCaptured, currentSlotIndex, currentUser, room]);
 
   if (!room || !currentUser) {
     return (

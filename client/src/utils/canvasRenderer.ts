@@ -19,11 +19,15 @@ export async function generatePhotoStripCanvas(
   const { photos, template, headerText, subText, eventDate, filter, stickers } = options;
 
   const is8CutGrid = template.slots === 8 || template.aspectRatio === '2x4' || template.id === 'life4cuts_korean';
+  const isDual4Cut = template.aspectRatio === '2x2' || template.id === 'dual_4cuts';
 
   const canvas = document.createElement('canvas');
   if (is8CutGrid) {
     canvas.width = 1200;
     canvas.height = 1800;
+  } else if (isDual4Cut) {
+    canvas.width = 1200;
+    canvas.height = 1350;
   } else {
     canvas.width = 800;
     canvas.height = 2400;
@@ -39,13 +43,13 @@ export async function generatePhotoStripCanvas(
   const secondaryTextColor = isLightBg ? 'rgba(9, 9, 11, 0.65)' : 'rgba(255, 255, 255, 0.7)';
   const footerSubTextColor = isLightBg ? 'rgba(9, 9, 11, 0.45)' : 'rgba(255, 255, 255, 0.5)';
 
-  // 1. Render Background
-  ctx.fillStyle = template.secondaryColor || (is8CutGrid ? '#0a0a0a' : '#09090b');
+  // 1. Render Background Fills
+  ctx.fillStyle = template.secondaryColor || (is8CutGrid || isDual4Cut ? '#0a0a0a' : '#09090b');
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   // Decorative Theme Backgrounds
   if (template.category === 'wedding') {
-    const gradient = ctx.createRadialGradient(400, 1200, 100, 400, 1200, 1200);
+    const gradient = ctx.createRadialGradient(canvas.width / 2, canvas.height / 2, 100, canvas.width / 2, canvas.height / 2, 1200);
     gradient.addColorStop(0, '#1c1917');
     gradient.addColorStop(1, '#0c0a09');
     ctx.fillStyle = gradient;
@@ -59,15 +63,15 @@ export async function generatePhotoStripCanvas(
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
-  // 2. Korean Life4Cuts (인생네컷) 2x4 8-Cut Grid Renderer
-  if (is8CutGrid) {
+  // 2. Dual Grid Renderer (2 Columns: Left = Host, Right = Joiner)
+  if (is8CutGrid || isDual4Cut) {
     const outerMargin = 40;
-    const footerHeight = 220;
+    const footerHeight = 200;
     const gridWidth = canvas.width - 2 * outerMargin;
     const gridHeight = canvas.height - outerMargin - footerHeight;
 
     const cols = 2;
-    const rows = 4;
+    const rows = is8CutGrid ? 4 : 2;
     const gapX = 30;
     const gapY = 30;
 
@@ -117,35 +121,36 @@ export async function generatePhotoStripCanvas(
             console.warn(`Failed to render image slot ${i}`, err);
           }
         } else {
-          // Placeholder
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-          ctx.font = 'bold 28px sans-serif';
+          // Role Placeholder Text (Left Column = Host, Right Column = Joiner)
+          const roleLabel = c === 0 ? `HOST (SLOT #${i + 1})` : `JOINER (SLOT #${i + 1})`;
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+          ctx.font = 'bold 24px sans-serif';
           ctx.textAlign = 'center';
-          ctx.fillText(`FRAME #${i + 1}`, slotX + slotWidth / 2, slotY + slotHeight / 2);
+          ctx.fillText(roleLabel, slotX + slotWidth / 2, slotY + slotHeight / 2);
         }
       }
     }
 
-    // 8-Cut Footer Section (Life4Cuts Branding)
+    // Grid Footer Section
     const footerY = canvas.height - footerHeight / 2 - 10;
     ctx.save();
     ctx.textAlign = 'center';
 
     ctx.fillStyle = primaryTextColor;
-    ctx.font = 'bold 56px "Outfit", "Inter", sans-serif';
-    ctx.fillText(headerText || template.headerText || '인생네컷', canvas.width / 2, footerY - 20);
+    ctx.font = 'bold 52px "Outfit", "Inter", sans-serif';
+    ctx.fillText(headerText || template.headerText || (is8CutGrid ? '인생네컷' : 'DUAL 4 CUTS'), canvas.width / 2, footerY - 20);
 
     ctx.fillStyle = secondaryTextColor;
     ctx.font = '600 22px "Space Grotesk", sans-serif';
-    ctx.fillText((subText || template.subText || 'LIFE 4 CUTS').toUpperCase(), canvas.width / 2, footerY + 30);
+    ctx.fillText((subText || template.subText || 'PAIR PHOTO BOOTH').toUpperCase(), canvas.width / 2, footerY + 28);
 
     ctx.fillStyle = footerSubTextColor;
     ctx.font = '500 18px "Inter", sans-serif';
-    ctx.fillText(`• ${eventDate.toUpperCase()} • STAGE STUDIO`, canvas.width / 2, footerY + 65);
+    ctx.fillText(`• ${eventDate.toUpperCase()} • STAGE STUDIO`, canvas.width / 2, footerY + 62);
     ctx.restore();
 
   } else {
-    // 4-Slot Vertical Polaroid Strip Renderer
+    // 4-Slot Vertical Polaroid Strip Renderer (Turn-Based Alternating Host & Joiner)
     const borderWidth = 30;
     ctx.strokeStyle = primaryTextColor;
     ctx.lineWidth = borderWidth;
@@ -222,10 +227,11 @@ export async function generatePhotoStripCanvas(
           console.warn(`Failed to render image slot ${i}`, err);
         }
       } else {
+        const turnLabel = i % 2 === 0 ? `HOST (SHOT #${i + 1})` : `JOINER (SHOT #${i + 1})`;
         ctx.fillStyle = isLightBg ? 'rgba(9, 9, 11, 0.35)' : 'rgba(255, 255, 255, 0.25)';
-        ctx.font = '500 32px "Inter", sans-serif';
+        ctx.font = '500 30px "Inter", sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(`FRAME #${i + 1}`, slotX + slotWidth / 2, slotY + slotHeight / 2);
+        ctx.fillText(turnLabel, slotX + slotWidth / 2, slotY + slotHeight / 2);
       }
     }
 
