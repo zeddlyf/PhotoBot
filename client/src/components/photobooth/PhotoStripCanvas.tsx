@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRoomStore } from '../../store/useRoomStore';
 import { generatePhotoStripCanvas } from '../../utils/canvasRenderer';
-import { Download, Printer, QrCode, Sparkles, RefreshCw, Share2 } from 'lucide-react';
+import { Download, Printer, QrCode, Sparkles, RefreshCw } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface PhotoStripCanvasProps {
@@ -96,7 +96,7 @@ export const PhotoStripCanvas: React.FC<PhotoStripCanvasProps> = ({
   const handleDownloadPNG = async () => {
     if (!previewUrl) return;
 
-    const fileName = `SnapTogether_${selectedTemplate?.category || 'Strip'}_${Date.now()}.png`;
+    const fileName = `PhotoBoth_${selectedTemplate?.category || 'Strip'}_${Date.now()}.png`;
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     if (isMobile && navigator.canShare) {
@@ -108,8 +108,8 @@ export const PhotoStripCanvas: React.FC<PhotoStripCanvasProps> = ({
         if (navigator.canShare({ files: [file] })) {
           await navigator.share({
             files: [file],
-            title: 'SnapTogether Photo Strip',
-            text: 'Check out my photo strip from SnapTogether!'
+            title: 'PhotoBoth Photo Strip',
+            text: 'Check out my photo strip from PhotoBoth!'
           });
           return;
         }
@@ -125,7 +125,7 @@ export const PhotoStripCanvas: React.FC<PhotoStripCanvasProps> = ({
   const handleDownloadJPG = async () => {
     if (!previewUrl) return;
 
-    const fileName = `SnapTogether_Strip_${Date.now()}.jpg`;
+    const fileName = `PhotoBoth_Strip_${Date.now()}.jpg`;
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     try {
@@ -157,8 +157,8 @@ export const PhotoStripCanvas: React.FC<PhotoStripCanvasProps> = ({
             if (navigator.canShare({ files: [file] })) {
               await navigator.share({
                 files: [file],
-                title: 'SnapTogether Photo Strip',
-                text: 'Check out my photo strip from SnapTogether!'
+                title: 'PhotoBoth Photo Strip',
+                text: 'Check out my photo strip from PhotoBoth!'
               });
               return;
             }

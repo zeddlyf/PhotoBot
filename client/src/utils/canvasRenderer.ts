@@ -171,7 +171,7 @@ export async function generatePhotoStripCanvas(
     ctx.font = template.fontFamily === 'serif' 
       ? 'bold 54px "Cinzel", "Playfair Display", serif'
       : 'bold 52px "Outfit", "Inter", sans-serif';
-    ctx.fillText(headerText || template.headerText || 'SNAP TOGETHER', 400, 130);
+    ctx.fillText(headerText || template.headerText || 'PHOTO BOTH', 400, 130);
 
     ctx.fillStyle = secondaryTextColor;
     ctx.font = '500 26px "Inter", sans-serif';
@@ -245,7 +245,7 @@ export async function generatePhotoStripCanvas(
 
     ctx.fillStyle = footerSubTextColor;
     ctx.font = '600 22px "Inter", sans-serif';
-    ctx.fillText('SNAPTOGETHER.APP — CREATED BY ZEDDLYF', 400, footerY + 40);
+    ctx.fillText('PHOTOBOTH.APP — CREATED BY ZEDDLYF', 400, footerY + 40);
     ctx.restore();
   }
 

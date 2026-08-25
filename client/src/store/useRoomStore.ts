@@ -71,7 +71,7 @@ export const useRoomStore = create<RoomStore>((set) => ({
   currentSlotIndex: 0,
   isShutterFlashing: false,
 
-  headerText: 'SNAP TOGETHER',
+  headerText: 'PHOTO BOTH',
   subText: 'Live Online Booth',
   eventDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
   stickers: [],
@@ -84,7 +84,7 @@ export const useRoomStore = create<RoomStore>((set) => ({
     if (selectedTemplate) {
       set({
         selectedTemplate,
-        headerText: selectedTemplate.headerText || 'SNAP TOGETHER',
+        headerText: selectedTemplate.headerText || 'PHOTO BOTH',
         subText: selectedTemplate.subText || 'Live Online Booth'
       });
     } else {

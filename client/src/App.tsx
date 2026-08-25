@@ -23,7 +23,7 @@ const Navbar: React.FC = () => {
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-sm font-extrabold tracking-tight text-white">
-              SNAP<span className="text-rose-500">TOGETHER</span>
+              PHOTO<span className="text-rose-500">BOTH</span>
             </span>
             <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[9px] font-bold text-rose-400 border border-rose-500/20 uppercase tracking-widest hidden sm:inline">
               STUDIO
@@ -79,7 +79,7 @@ const Footer: React.FC = () => (
     <div className="mx-auto max-w-5xl px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
       <div className="flex items-center gap-2">
         <Camera className="h-4 w-4 text-rose-500" />
-        <span className="font-bold text-zinc-300">SnapTogether Studio</span>
+        <span className="font-bold text-zinc-300">PhotoBoth Studio</span>
         <span>— Real-Time Multiplayer Photo Booth</span>
       </div>
       <p className="flex items-center gap-1.5 font-medium text-zinc-400">
