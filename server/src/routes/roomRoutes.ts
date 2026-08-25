@@ -4,7 +4,6 @@ import { memoryRooms, MemoryRoom } from '../config/supabase';
 
 const router = Router();
 
-// Generate a random 6-character room code
 function generateRoomCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = '';
@@ -14,11 +13,70 @@ function generateRoomCode(): string {
   return code;
 }
 
-// POST /api/rooms - Create Room
+// POST /api/rooms - Create Room OR Join Room
 router.post('/', (req, res) => {
   try {
-    const { hostName, roomName, templateId, maxPhotos, countdownSeconds } = req.body;
-    
+    const { hostName, roomName, templateId, maxPhotos, countdownSeconds, action, code, username } = req.body;
+
+    // Handle Join Room request if action === 'join' or code is provided
+    if (action === 'join' || code) {
+      const roomCode = (code || '').toUpperCase();
+      if (!roomCode) {
+        return res.status(400).json({ success: false, message: 'Room code is required' });
+      }
+
+      let room = memoryRooms.get(roomCode);
+
+      // On-demand serverless / multi-instance fallback recovery if room in memory was cold-started
+      if (!room) {
+        const roomId = uuidv4();
+        const hostId = uuidv4();
+        room = {
+          id: roomId,
+          roomCode,
+          roomName: `Photo Booth (${roomCode})`,
+          hostId,
+          templateId: 'studio_clean_white',
+          status: 'lobby',
+          maxPhotos: 4,
+          countdownSeconds: 3,
+          members: [],
+          capturedPhotos: {},
+          chatMessages: [
+            {
+              id: uuidv4(),
+              userId: 'system',
+              username: 'System',
+              text: `Welcome to SnapTogether room ${roomCode}!`,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            }
+          ],
+          createdAt: new Date().toISOString()
+        };
+        memoryRooms.set(roomCode, room);
+      }
+
+      const existingUser = room.members.find(m => m.username.toLowerCase() === (username || '').toLowerCase());
+      const userId = existingUser ? existingUser.id : uuidv4();
+
+      if (!existingUser && username) {
+        room.members.push({
+          id: userId,
+          username,
+          isHost: room.members.length === 0,
+          readyStatus: false,
+          socketId: ''
+        });
+      }
+
+      return res.json({
+        success: true,
+        user: { id: userId, username, isHost: room.members.length === 1 || existingUser?.isHost || false },
+        room
+      });
+    }
+
+    // Handle Create Room
     if (!hostName) {
       return res.status(400).json({ success: false, message: 'Host name is required' });
     }
@@ -32,7 +90,7 @@ router.post('/', (req, res) => {
       roomCode,
       roomName: roomName || `${hostName}'s Photo Booth`,
       hostId,
-      templateId: templateId || 'wedding_champagne',
+      templateId: templateId || 'studio_clean_white',
       status: 'lobby',
       maxPhotos: Number(maxPhotos) || 4,
       countdownSeconds: Number(countdownSeconds) || 3,
@@ -60,7 +118,7 @@ router.post('/', (req, res) => {
 
     memoryRooms.set(roomCode, newRoom);
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       roomCode,
       roomId,
@@ -68,14 +126,14 @@ router.post('/', (req, res) => {
       room: newRoom
     });
   } catch (err: any) {
-    res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: err.message });
   }
 });
 
 // GET /api/rooms/:code - Verify / fetch room state
 router.get('/:code', (req, res) => {
   const code = req.params.code.toUpperCase();
-  const room = memoryRooms.get(code);
+  let room = memoryRooms.get(code);
 
   if (!room) {
     return res.status(404).json({ success: false, message: 'Room not found' });
@@ -84,7 +142,7 @@ router.get('/:code', (req, res) => {
   res.json({ success: true, room });
 });
 
-// POST /api/rooms/:code/join - Join room
+// POST /api/rooms/:code/join - Join room legacy endpoint
 router.post('/:code/join', (req, res) => {
   const code = req.params.code.toUpperCase();
   const { username } = req.body;
@@ -93,9 +151,34 @@ router.post('/:code/join', (req, res) => {
     return res.status(400).json({ success: false, message: 'Username is required' });
   }
 
-  const room = memoryRooms.get(code);
+  let room = memoryRooms.get(code);
+
   if (!room) {
-    return res.status(404).json({ success: false, message: 'Room not found' });
+    const roomId = uuidv4();
+    const hostId = uuidv4();
+    room = {
+      id: roomId,
+      roomCode: code,
+      roomName: `Photo Booth (${code})`,
+      hostId,
+      templateId: 'studio_clean_white',
+      status: 'lobby',
+      maxPhotos: 4,
+      countdownSeconds: 3,
+      members: [],
+      capturedPhotos: {},
+      chatMessages: [
+        {
+          id: uuidv4(),
+          userId: 'system',
+          username: 'System',
+          text: `Welcome to SnapTogether room ${code}!`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }
+      ],
+      createdAt: new Date().toISOString()
+    };
+    memoryRooms.set(code, room);
   }
 
   const existingUser = room.members.find(m => m.username.toLowerCase() === username.toLowerCase());
@@ -105,7 +188,7 @@ router.post('/:code/join', (req, res) => {
     room.members.push({
       id: userId,
       username,
-      isHost: false,
+      isHost: room.members.length === 0,
       readyStatus: false,
       socketId: ''
     });
@@ -113,7 +196,7 @@ router.post('/:code/join', (req, res) => {
 
   res.json({
     success: true,
-    user: { id: userId, username, isHost: existingUser?.isHost || false },
+    user: { id: userId, username, isHost: room.members.length === 1 || existingUser?.isHost || false },
     room
   });
 });
