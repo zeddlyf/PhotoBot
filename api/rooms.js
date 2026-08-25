@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 
 const rooms = globalThis.__memory_rooms || new Map();
 globalThis.__memory_rooms = rooms;
@@ -22,20 +22,25 @@ export default function handler(req, res) {
   }
 
   try {
+    let body = req.body;
+    if (typeof body === 'string') {
+      try { body = JSON.parse(body); } catch (_) {}
+    }
+    body = body || {};
+
     if (req.method === 'POST') {
-      const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
-      const { hostName, roomName, templateId, maxPhotos, countdownSeconds, username } = body;
+      const { hostName, roomName, templateId, maxPhotos, countdownSeconds, username, code } = body;
 
       // Handle Join Room request
-      if (req.url && req.url.includes('/join')) {
-        const code = (req.query.code || body.code || '').toUpperCase();
-        const room = rooms.get(code);
+      if (code || (req.url && req.url.includes('join'))) {
+        const roomCode = (code || req.query.code || '').toUpperCase();
+        const room = rooms.get(roomCode);
         if (!room) {
           return res.status(404).json({ success: false, message: 'Room not found' });
         }
 
         const existingUser = room.members.find(m => m.username.toLowerCase() === (username || '').toLowerCase());
-        const userId = existingUser ? existingUser.id : uuidv4();
+        const userId = existingUser ? existingUser.id : crypto.randomUUID();
 
         if (!existingUser && username) {
           room.members.push({
@@ -60,8 +65,8 @@ export default function handler(req, res) {
       }
 
       const roomCode = generateRoomCode();
-      const roomId = uuidv4();
-      const hostId = uuidv4();
+      const roomId = crypto.randomUUID();
+      const hostId = crypto.randomUUID();
 
       const newRoom = {
         id: roomId,
@@ -84,7 +89,7 @@ export default function handler(req, res) {
         capturedPhotos: {},
         chatMessages: [
           {
-            id: uuidv4(),
+            id: crypto.randomUUID(),
             userId: 'system',
             username: 'System',
             text: `Welcome to ${roomName || 'SnapTogether'}! Share code ${roomCode} with friends!`,
@@ -117,8 +122,8 @@ export default function handler(req, res) {
       return res.json({ success: true, rooms: Array.from(rooms.values()) });
     }
 
-    res.status(405).json({ message: 'Method not allowed' });
+    return res.status(405).json({ message: 'Method not allowed' });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: err.message || 'Internal Server Error' });
   }
 }
