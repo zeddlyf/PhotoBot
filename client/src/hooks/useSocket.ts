@@ -2,7 +2,14 @@ import { useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useRoomStore } from '../store/useRoomStore';
 
-const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001';
+const getSocketServerUrl = () => {
+  const envUrl = import.meta.env.VITE_SOCKET_URL;
+  if (envUrl) return envUrl;
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    return 'http://localhost:3001';
+  }
+  return '';
+};
 
 export function useSocket(roomCode?: string) {
   const socketRef = useRef<Socket | null>(null);
@@ -18,11 +25,18 @@ export function useSocket(roomCode?: string) {
   } = useRoomStore();
 
   useEffect(() => {
+    const serverUrl = getSocketServerUrl();
+
+    if (!serverUrl) {
+      console.log('[Socket.IO] No socket server URL configured for production. Single-player mode active.');
+      return;
+    }
+
     // Initialize Socket Connection
-    const socket = io(SOCKET_SERVER_URL, {
+    const socket = io(serverUrl, {
       transports: ['websocket', 'polling'],
       autoConnect: true,
-      reconnectionAttempts: 10
+      reconnectionAttempts: 3
     });
 
     socketRef.current = socket;
